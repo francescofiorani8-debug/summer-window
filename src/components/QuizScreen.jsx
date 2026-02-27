@@ -2,14 +2,15 @@ import React, { useState } from 'react';
 
 const QuizScreen = ({ onFinish, darkMode }) => {
   const [step, setStep] = useState(1);
-  const [prefs, setPrefs] = useState({ type: '', age: '', mood: '', periodMonths: [] });
+  const [prefs, setPrefs] = useState({ type: '', age: '', mood: '', periodMonths: [], budget: 2 });
+
+  const totalSteps = 5; // Aumentato a 5
 
   const nextStep = (field, value, extraData = null) => {
-    // Salviamo i dati: se extraData (i mesi) esiste usiamo quello, altrimenti il valore normale
     const newPrefs = { ...prefs, [field]: extraData || value };
     setPrefs(newPrefs);
     
-    if (step < 4) { 
+    if (step < totalSteps) { 
       setStep(step + 1);
     } else {
       onFinish(newPrefs);
@@ -57,6 +58,17 @@ const QuizScreen = ({ onFinish, darkMode }) => {
         { label: "Il mio posto segreto", value: "hidden", icon: "🗺️" },
         { label: "Ero dove nasce il trend", value: "trendsetter", icon: "🔥" }
       ]
+    },
+    // NUOVO STEP 5: BUDGET
+    {
+      id: 5,
+      field: 'budget',
+      question: "Qual è il tuo target di spesa?",
+      options: [
+        { label: "Smart & Low", value: 1, icon: "💳" },
+        { label: "Comfort Mid", value: 2, icon: "🏨" },
+        { label: "Luxury & Top", value: 3, icon: "✨" }
+      ]
     }
   ];
 
@@ -68,27 +80,26 @@ const QuizScreen = ({ onFinish, darkMode }) => {
         ? 'bg-[#0b0e11] bg-gradient-to-br from-[#0b0e11] to-[#6d4aff]/20 text-white' 
         : 'bg-white bg-gradient-to-br from-[#76c876]/10 to-white text-black'}`}>
       
-      {/* Barra di Progresso */}
+      {/* Barra di Progresso Aggiornata */}
       <div className="fixed top-0 left-0 w-full h-2 bg-slate-200 dark:bg-slate-800">
         <div 
-          className="h-full bg-[#6d4aff] transition-all duration-500 ease-out"
-          style={{ width: `${(step / 4) * 100}%` }}
+          className="h-full bg-[#6d4aff] transition-all duration-500 ease-out shadow-[0_0_15px_rgba(109,74,255,0.5)]"
+          style={{ width: `${(step / totalSteps) * 100}%` }}
         ></div>
       </div>
 
       <div className="max-w-5xl w-full text-center">
-        {/* Badge Step */}
+        {/* Badge Step Aggiornato */}
         <div className="inline-block px-4 py-1 rounded-full bg-[#6d4aff]/10 border border-[#6d4aff]/20 mb-6">
           <span className="text-[#6d4aff] font-black uppercase tracking-widest text-xs">
-            Analisi Profilo: Step {step} di 4
+            Analisi Profilo: Step {step} di {totalSteps}
           </span>
         </div>
 
-        <h2 className={`text-4xl md:text-6xl font-black mb-16 tracking-tighter ${darkMode ? 'text-white' : 'text-black'}`}>
+        <h2 className={`text-4xl md:text-6xl font-black mb-16 tracking-tighter leading-tight ${darkMode ? 'text-white' : 'text-black'}`}>
           {currentStep.question}
         </h2>
 
-        {/* Contenitore Opzioni Centrato */}
         <div className="flex justify-center w-full">
           <div className={`grid gap-6 w-full max-w-fit mx-auto ${
             currentStep.options.length === 4 
@@ -104,7 +115,6 @@ const QuizScreen = ({ onFinish, darkMode }) => {
                     ? 'bg-white/5 border-white/10 hover:border-[#6d4aff] hover:bg-white/10' 
                     : 'bg-white border-slate-100 shadow-[0_15px_40px_rgba(0,0,0,0.06)] hover:shadow-[0_25px_50px_rgba(118,200,118,0.15)] hover:border-[#76c876]'}`}
               >
-                {/* Effetto decorativo */}
                 <div className="absolute -right-4 -top-4 w-20 h-20 bg-[#6d4aff]/5 rounded-full group-hover:scale-150 transition-transform duration-500"></div>
                 
                 <div className="text-5xl mb-4 transform group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300">
@@ -113,12 +123,19 @@ const QuizScreen = ({ onFinish, darkMode }) => {
                 <span className={`font-black text-lg block leading-tight ${darkMode ? 'text-white' : 'text-black'}`}>
                   {opt.label}
                 </span>
+                {/* Indicatore visivo del valore budget (solo per lo step 5) */}
+                {currentStep.id === 5 && (
+                   <div className="mt-2 flex justify-center gap-1 opacity-30 group-hover:opacity-100 transition-opacity">
+                      {[...Array(opt.value)].map((_, i) => (
+                        <span key={i} className="text-[#6d4aff] text-xs">●</span>
+                      ))}
+                   </div>
+                )}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Footer */}
         <p className={`mt-16 text-sm font-bold opacity-30 uppercase tracking-[0.3em] ${darkMode ? 'text-white' : 'text-black'}`}>
           SummerWindow Algorithm 2026
         </p>

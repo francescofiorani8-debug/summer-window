@@ -51,8 +51,13 @@ const Sidebar = ({ cities = [], onSelectCity, onGoHome, darkMode }) => {
 
       <div className="flex-1 overflow-y-auto px-4 space-y-4 custom-scrollbar">
         {filteredCities.map(city => {
-          // Calcolo percentuale basato sullo score (max score possibile = 6)
-          const matchPercentage = Math.round((city.matchScore / 10) * 100);
+          // --- FIX LOGICO ---
+          // Usiamo direttamente il valore percentuale (0-100) calcolato in App.jsx
+          const displayPercentage = city.matchScore || 0;
+          
+          // Calcoliamo i puntini (max 10) dividendo per 10 e arrotondando per difetto
+          // Questo evita il RangeError: Invalid array length
+          const dotsCount = Math.min(Math.floor(displayPercentage / 10), 10);
 
           return (
             <div 
@@ -70,9 +75,9 @@ const Sidebar = ({ cities = [], onSelectCity, onGoHome, darkMode }) => {
                   <div className="flex justify-between items-start mb-1">
                     <b className="text-white text-lg drop-shadow-md block leading-none">{city.name}</b>
                     
-                    {/* Badge Percentuale Dinamico */}
+                    {/* Badge Percentuale: ora mostra il valore reale 0-100% */}
                     <span className="bg-[#6d4aff] text-[9px] text-white px-2 py-1 rounded-md font-black uppercase shadow-lg shadow-[#6d4aff]/40">
-                      {matchPercentage}% Match
+                      {displayPercentage}% Match
                     </span>
                   </div>
                   
@@ -80,11 +85,12 @@ const Sidebar = ({ cities = [], onSelectCity, onGoHome, darkMode }) => {
                     <span className="text-[#00ffcc] text-[10px] font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
                       Dettagli Trend
                     </span>
-                    {/* Indicatori di affinità visivi (puntini) */}
+                    
+                    {/* Indicatori di affinità sicuri: max 10 pallini */}
                     <div className="flex gap-0.5 opacity-60">
-                       {[...Array(city.matchScore)].map((_, i) => (
-                         <div key={i} className="w-1 h-1 bg-[#00ffcc] rounded-full"></div>
-                       ))}
+                      {[...Array(dotsCount)].map((_, i) => (
+                        <div key={i} className="w-1 h-1 bg-[#00ffcc] rounded-full"></div>
+                      ))}
                     </div>
                   </div>
                 </div>
