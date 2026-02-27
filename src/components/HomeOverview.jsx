@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const HomeOverview = ({ onGoToMap, onResetQuiz, toggleTheme, darkMode, userPrefs, recommendedCount, bestMatch }) => {
+const HomeOverview = ({ onGoToMap, onResetQuiz, toggleTheme, darkMode, userPrefs, recommendedCount, bestMatch, onLogoClick }) => {
   // Stato per gestire quale tool è aperto nel popup
   const [activeTool, setActiveTool] = useState(null);
 
@@ -34,7 +34,12 @@ const HomeOverview = ({ onGoToMap, onResetQuiz, toggleTheme, darkMode, userPrefs
       {/* NAVBAR */}
       <nav className="flex justify-between items-center p-8 sticky top-0 w-full z-50 backdrop-blur-md">
         <div className={`text-2xl font-black tracking-tighter ${darkMode ? 'text-white' : 'text-black'}`}>
-          SummerWindow
+          <h1 
+            onClick={onLogoClick} 
+            className="cursor-pointer hover:opacity-80 transition-opacity font-black tracking-tighter text-3xl"
+          >
+          SummerWindow<span className="text-[#6d4aff]">.</span>
+          </h1>
         </div>
 
         <div className="flex items-center gap-6">
