@@ -11,7 +11,7 @@ import { hotCities } from './data/cities';
 
 function App() {
   const [view, setView] = useState('welcome');
-  const [darkMode, setDarkMode] = useState(true);
+  const [darkMode, setDarkMode] = useState(false);
   const [selectedCity, setSelectedCity] = useState(null);
   const [userPreferences, setUserPreferences] = useState(null);
   
