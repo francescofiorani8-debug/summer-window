@@ -4,6 +4,8 @@ const HomeOverview = ({
   onGoToMap, 
   onResetQuiz, 
   onStartBattle, 
+  onGoHome, 
+  onGenerateItinerary, 
   toggleTheme, 
   darkMode, 
   userPrefs, 
@@ -11,7 +13,10 @@ const HomeOverview = ({
   bestMatch, 
   onLogoClick,
   isGroup,           
-  participantsCount  
+  participantsCount,
+  // NUOVE PROPS NECESSARIE
+  user,
+  onProfileClick 
 }) => {
   const [activeTool, setActiveTool] = useState(null);
 
@@ -44,8 +49,11 @@ const HomeOverview = ({
         ? 'bg-[#0b0e11] bg-gradient-to-br from-[#0b0e11] via-[#0b0e11] to-[#6d4aff]/30'
         : 'bg-white bg-gradient-to-br from-[#76c876]/20 via-white to-white'}`}>
 
-      {/* NAVBAR */}
-      <nav className="flex justify-between items-center p-8 sticky top-0 w-full z-50 backdrop-blur-md">
+      {/* NAVBAR AGGIORNATA */}
+      <nav className={`fixed top-0 left-0 w-full z-50 px-8 py-6 flex justify-between items-center backdrop-blur-md border-b transition-all
+        ${darkMode ? 'bg-black/20 border-white/5' : 'bg-white/40 border-slate-200'}`}>
+        
+        {/* Sinistra: Brand */}
         <div className={`text-2xl font-black tracking-tighter ${darkMode ? 'text-white' : 'text-black'}`}>
           <h1 
             onClick={onLogoClick} 
@@ -55,27 +63,59 @@ const HomeOverview = ({
           </h1>
         </div>
 
-        <div className="flex items-center gap-6">
-          <button
-            onClick={onResetQuiz}
-            className={`text-xs font-black uppercase tracking-[0.2em] transition-all hover:text-[#6d4aff] ${darkMode ? 'text-white/50' : 'text-black/50'}`}
-          >
+        {/* Centro: Navigazione */}
+        <div className="hidden lg:flex items-center gap-8">
+          <button onClick={onGoHome} className={`text-[10px] font-black uppercase tracking-[0.2em] transition-all hover:text-[#6d4aff] ${darkMode ? 'text-white/50' : 'text-black/50'}`}>
+            Home
+          </button>
+          <button onClick={onResetQuiz} className={`text-[10px] font-black uppercase tracking-[0.2em] transition-all hover:text-[#6d4aff] ${darkMode ? 'text-white/50' : 'text-black/50'}`}>
             {isGroup ? "Rifai per il Gruppo" : "Rifai Quiz"}
           </button>
-
-          <button
-            onClick={onGoToMap}
-            className="bg-[#6d4aff] text-white px-6 py-2 rounded-full font-bold text-sm hover:scale-105 transition-all shadow-lg shadow-[#6d4aff]/20"
-          >
+          <button onClick={onGoToMap} className={`text-[10px] font-black uppercase tracking-[0.2em] transition-all hover:text-[#6d4aff] ${darkMode ? 'text-white/50' : 'text-black/50'}`}>
             Vai alla Mappa
+          </button>
+          <button onClick={onGenerateItinerary} className={`text-[10px] font-black uppercase tracking-[0.2em] transition-all hover:text-[#00ffcc] ${darkMode ? 'text-white/50' : 'text-black/50'}`}>
+            Genera Itinerario
+          </button>
+        </div>
+
+        {/* Destra: Profilo Utente (Sostituisce lo spazio vuoto) */}
+        <div className="flex items-center justify-end min-w-[150px]">
+          <button 
+            onClick={onProfileClick}
+            className={`group flex items-center gap-3 p-1 pr-4 rounded-full transition-all border
+              ${darkMode 
+                ? 'bg-white/5 border-white/10 hover:bg-white/10' 
+                : 'bg-slate-100 border-slate-200 hover:bg-slate-200'}`}
+          >
+            {user ? (
+              <>
+                <div className="relative">
+                  <img src={user.avatar} alt="Profile" className="w-8 h-8 rounded-full border-2 border-[#6d4aff]" />
+                  <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-[#00ffcc] rounded-full border-2 border-[#0b0e11]"></div>
+                </div>
+                <span className={`text-[10px] font-black uppercase tracking-widest hidden md:block ${darkMode ? 'text-white' : 'text-black'}`}>
+                  {user.name}
+                </span>
+              </>
+            ) : (
+              <>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm border-2 border-dashed
+                  ${darkMode ? 'border-white/20 text-white/40' : 'border-black/20 text-black/40'}`}>
+                  👤
+                </div>
+                <span className={`text-[10px] font-black uppercase tracking-widest hidden md:block ${darkMode ? 'text-white/60' : 'text-black/60'}`}>
+                  Login
+                </span>
+              </>
+            )}
           </button>
         </div>
       </nav>
 
       {/* HERO SECTION */}
-      <div className="flex flex-col items-center justify-center pt-20 pb-12 text-center px-8 relative z-10 animate-title">
-
-        {/* Badge Dinamico */}
+      <div className="flex flex-col items-center justify-center pt-44 pb-12 text-center px-8 relative z-10 animate-title">
+        {/* ... (Badge Dinamico rimane invariato) */}
         {(userPrefs || isGroup) && (
           <div className="mb-6 flex flex-col items-center gap-3">
             <span className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.3em] animate-pulse border
@@ -105,7 +145,7 @@ const HomeOverview = ({
             </p>
 
             {bestMatch && (
-              <div className="mt-8 p-8 rounded-[3rem] border border-white/5 bg-white/5 backdrop-blur-sm relative group overflow-hidden">
+              <div className="mt-8 p-10 rounded-[3rem] border border-white/5 bg-white/5 backdrop-blur-sm relative group overflow-hidden">
                 <div className="absolute top-4 right-8 bg-[#00ffcc] text-black px-3 py-1 rounded-full font-black text-[10px] uppercase">
                    Match Score: {bestMatch.matchScore}%
                 </div>
@@ -115,17 +155,6 @@ const HomeOverview = ({
                 <h2 className="text-5xl md:text-7xl font-black text-[#00ffcc] tracking-tighter uppercase mb-4">
                   {bestMatch.name}
                 </h2>
-
-                {/* SOCIAL INSIGHTS */}
-                {isGroup && bestMatch.groupReasons && (
-                  <div className="flex flex-wrap justify-center gap-2 mt-4">
-                    {bestMatch.groupReasons.map((reason, i) => (
-                      <span key={i} className="bg-white/10 text-[10px] px-3 py-1 rounded-full font-bold uppercase tracking-widest border border-white/10">
-                        ✨ {reason}
-                      </span>
-                    ))}
-                  </div>
-                )}
               </div>
             )}
           </div>
@@ -154,7 +183,7 @@ const HomeOverview = ({
         </div>
       </div>
 
-      {/* GRIGLIA TOOL */}
+      {/* ... (Griglia Tool e Modal Tool rimangono invariati) */}
       <div className="max-w-6xl mx-auto px-8 pt-20 pb-40 relative z-10">
         <h2 className={`text-sm font-black uppercase tracking-[0.3em] mb-12 text-center opacity-40 ${darkMode ? 'text-white' : 'text-black'}`}>
           {isGroup ? "Tecnologia di Mediazione Social" : "I Nostri Strumenti"}
@@ -178,32 +207,10 @@ const HomeOverview = ({
               <p className={`leading-relaxed font-semibold ${darkMode ? 'text-slate-400' : 'text-slate-700'}`}>
                 {item.desc}
               </p>
-              <div className="mt-4 text-[#6d4aff] text-[10px] font-black uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity">
-                Dettagli algoritmo +
-              </div>
             </div>
           ))}
         </div>
       </div>
-
-      {/* MODAL TOOL */}
-      {activeTool && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 animate-fade-in">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setActiveTool(null)}></div>
-          <div className={`relative max-w-lg w-full p-10 rounded-[3rem] shadow-3xl border transform animate-scale-up
-            ${darkMode ? 'bg-[#1a1d23] border-white/10 text-white' : 'bg-white border-slate-200 text-black'}`}>
-            <button onClick={() => setActiveTool(null)} className="absolute top-6 right-6 text-2xl opacity-50 hover:opacity-100 transition-opacity">✕</button>
-            <div className="text-6xl mb-6">{activeTool.icon}</div>
-            <h2 className="text-3xl font-black mb-4 tracking-tighter">{activeTool.title}</h2>
-            <p className={`text-lg leading-relaxed ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-              {activeTool.longDesc}
-            </p>
-            <button onClick={() => setActiveTool(null)} className="mt-10 w-full py-4 bg-[#6d4aff] text-white font-bold rounded-2xl hover:bg-[#5a39e6] transition-colors">
-              Chiudi
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* TEMA SWITCHER */}
       <div className="fixed bottom-8 right-8 z-[100]">

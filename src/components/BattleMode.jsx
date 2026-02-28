@@ -1,22 +1,20 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import TravelPlanner from './TravelPlanner';
 
 /**
- * BattleMode con “morph to center” + flip:
+ * BattleMode ottimizzata:
  * - Gestione votazione tra due città
  * - Celebrazione vincitore
- * - Schermata Itinerario dedicata con tasto Home
+ * - Delegazione dell'itinerario al componente padre (App.jsx)
  */
-const BattleMode = ({ cities, onBack, darkMode, participants = [] }) => {
+const BattleMode = ({ cities, onBack, darkMode, participants = [], onGenerateItinerary }) => {
   const [votesHistory, setVotesHistory] = useState([]);
   const [currentVote, setCurrentVote] = useState(null);
   const [currentVoterIndex, setCurrentVoterIndex] = useState(0);
 
   const [hasWinner, setHasWinner] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
-  const [showItinerary, setShowItinerary] = useState(false);
 
-  // Shared element overlay
+  // Shared element overlay stati
   const [activeCard, setActiveCard] = useState(null); 
   const [phase, setPhase] = useState("idle"); 
   const [isFlipped, setIsFlipped] = useState(false);
@@ -175,44 +173,7 @@ const BattleMode = ({ cities, onBack, darkMode, participants = [] }) => {
     );
   };
 
-  // --- RENDERING 1: SCHERMATA ITINERARIO (FULL SCREEN) ---
-  if (hasWinner && showItinerary) {
-    return (
-      <div className={`min-h-screen w-full flex flex-col p-6 animate-in fade-in duration-700 ${darkMode ? "bg-[#0b0e11] text-white" : "bg-slate-50 text-slate-900"}`}>
-        <div className="max-w-4xl mx-auto w-full">
-          {/* Header Itinerario */}
-          <div className="flex justify-between items-center mb-8">
-            <button 
-              onClick={() => setShowItinerary(false)} 
-              className="font-black uppercase tracking-widest text-[10px] opacity-40 hover:opacity-100 flex items-center gap-2"
-            >
-              ← Verdetto
-            </button>
-            <div className="text-center">
-              <h2 className="text-[10px] font-black uppercase tracking-[0.4em] opacity-40">Trip Itinerary</h2>
-              <h1 className="text-2xl font-black italic uppercase text-[#6d4aff]">{hasWinner.name}</h1>
-            </div>
-            <button 
-              onClick={onBack} 
-              className="bg-[#6d4aff] text-white px-4 py-2 rounded-xl font-black uppercase text-[9px] tracking-widest shadow-lg hover:scale-105 transition-all"
-            >
-              Nuova Ricerca 🏠
-            </button>
-          </div>
-
-          <TravelPlanner city={hasWinner} darkMode={darkMode} />
-          
-          <div className="mt-12 mb-8 text-center">
-            <button onClick={onBack} className="text-[10px] font-black uppercase tracking-[0.5em] opacity-20 hover:opacity-100 transition-all">
-              Reset Battle Mode
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // --- RENDERING 2: SCHERMATA VINCITORE (CELEBRAZIONE) ---
+  // --- RENDERING 1: SCHERMATA VINCITORE (CELEBRAZIONE) ---
   if (hasWinner) {
     return (
       <div className={`min-h-screen w-full flex flex-col items-center justify-center p-6 transition-colors duration-1000 ${darkMode ? "bg-[#0b0e11]" : "bg-white"}`}>
@@ -237,9 +198,9 @@ const BattleMode = ({ cities, onBack, darkMode, participants = [] }) => {
               </p>
               
               <div className="flex flex-col gap-3">
-                <button 
-                  onClick={() => setShowItinerary(true)} 
-                  className="w-full bg-[#6d4aff] text-white px-6 py-5 rounded-2xl font-black uppercase text-xs tracking-widest shadow-[0_10px_20px_rgba(109,74,255,0.3)] hover:scale-[1.02] transition-all border-b-4 border-black/20"
+                <button
+                  onClick={() => onGenerateItinerary(hasWinner)}
+                  className="w-full bg-[#6d4aff] text-white px-6 py-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-[#6d4aff]/20"
                 >
                   Genera Itinerario ✈️
                 </button>
@@ -254,7 +215,7 @@ const BattleMode = ({ cities, onBack, darkMode, participants = [] }) => {
     );
   }
 
-  // --- RENDERING 3: GRIGLIA BATTAGLIA (DEFAULT) ---
+  // --- RENDERING 2: GRIGLIA BATTAGLIA (DEFAULT) ---
   return (
     <div className={`h-screen max-h-screen p-4 flex flex-col overflow-hidden transition-colors duration-700 ${darkMode ? "bg-[#0b0e11] text-white" : "bg-slate-50 text-black"}`}>
       <div className="flex justify-between items-center mb-2 z-10">
