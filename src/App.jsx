@@ -17,7 +17,7 @@ import { hotCities } from './data/cities';
 function App() {
   // --- STATI DI NAVIGAZIONE E TEMA ---
   const [view, setView] = useState('welcome');
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(true);
   const [lastView, setLastView] = useState('welcome');
 
   // --- STATI UTENTE E AUTH ---
