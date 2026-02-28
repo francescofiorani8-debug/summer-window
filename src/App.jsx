@@ -7,48 +7,109 @@ import DetailsSidebar from './components/DetailsSidebar';
 import QuizScreen from './components/QuizScreen';
 import CityReport from './components/CityReport'; 
 import CityGallery from './components/CityGallery';
+import GroupManager from './components/GroupManager';
+import BattleMode from './components/BattleMode'; 
 import { hotCities } from './data/cities';
 
 function App() {
+  // --- STATI DI NAVIGAZIONE E TEMA ---
   const [view, setView] = useState('welcome');
   const [darkMode, setDarkMode] = useState(false);
-  const [selectedCity, setSelectedCity] = useState(null);
-  const [userPreferences, setUserPreferences] = useState(null);
-  
-  // --- NUOVO STATO: Ricorda da dove veniamo per il tasto "Back" ---
   const [lastView, setLastView] = useState('welcome');
 
-  // --- LOGICA DI SCORING NORMALIZZATA ---
+  // --- STATI UTENTE E GRUPPO ---
+  const [userPreferences, setUserPreferences] = useState(null);
+  const [selectedCity, setSelectedCity] = useState(null);
+  
+  // Stati per la Social Room
+  const [isGroupMode, setIsGroupMode] = useState(false);
+  const [groupParticipants, setGroupParticipants] = useState([]); 
+  const [currentParticipantIndex, setCurrentParticipantIndex] = useState(0);
+
+  // --- LOGICA DI SCORING AVANZATA (AI MATCHMAKING 2.0) ---
   const recommendedCities = useMemo(() => {
-    if (!userPreferences) return hotCities;
+    if (!userPreferences && groupParticipants.length === 0) return hotCities;
+
     const MAX_ALLOWED_SCORE = 25;
 
     return hotCities
       .map(city => {
         let currentScore = 0;
-        const hasSeasonMatch = userPreferences.periodMonths?.some(month => 
-          city.bestMonths.includes(month)
-        );
-        if (hasSeasonMatch) currentScore += 6; 
-        if (city.tags.type === userPreferences.type) currentScore += 5;
+        let groupReasons = []; 
 
-        const cityBudget = Number(city.budget);
-        const userBudget = Number(userPreferences.budget);
-        if (cityBudget === userBudget) {
-          currentScore += 8; 
-        } else if (Math.abs(cityBudget - userBudget) === 1) {
-          currentScore += 3;
+        if (isGroupMode && groupParticipants.length > 0) {
+          const allPrefs = groupParticipants.map(p => p.prefs).filter(p => p !== null);
+          const numPeople = allPrefs.length;
+          
+          if (numPeople === 0) return { ...city, matchScore: 0 };
+
+          // 1. SISTEMA DI VETO
+          const isVetoed = allPrefs.some(pref => 
+            pref.veto === city.tags.type || pref.veto === city.tags.mood
+          );
+          if (isVetoed) return { ...city, matchScore: 0, isVetoed: true };
+
+          // 2. BUDGET DI GRUPPO
+          const groupBudgets = allPrefs.map(p => Number(p.budget));
+          const minBudgetNeeded = Math.min(...groupBudgets);
+          const cityBudget = Number(city.budget);
+
+          if (cityBudget <= minBudgetNeeded) {
+            currentScore += 8;
+            groupReasons.push("Rispetta il budget di tutti");
+          } else if (cityBudget - minBudgetNeeded === 1) {
+            currentScore += 3;
+            groupReasons.push("Leggero extra-budget per alcuni");
+          }
+
+          // 3. MEDIAZIONE PREFERENZE
+          let matches = { type: 0, season: 0, mood: 0 };
+
+          allPrefs.forEach(pref => {
+            const hasSeasonMatch = pref.periodMonths?.some(m => city.bestMonths.includes(m));
+            if (hasSeasonMatch) {
+                currentScore += (6 / numPeople);
+                matches.season++;
+            }
+            if (city.tags.type === pref.type) {
+                currentScore += (5 / numPeople);
+                matches.type++;
+            }
+            if (city.tags.mood === pref.mood) {
+                currentScore += (3 / numPeople);
+                matches.mood++;
+            }
+            if (city.tags.age === pref.age) currentScore += (3 / numPeople);
+          });
+
+          if (matches.type >= numPeople / 2) groupReasons.push(`Atmosfera ${city.tags.type} approvata dalla maggioranza`);
+          if (matches.season === numPeople) groupReasons.push(`Tutti sono liberi in questo periodo`);
+
+        } else if (userPreferences) {
+          // --- LOGICA SINGOLO UTENTE ---
+          const hasSeasonMatch = userPreferences.periodMonths?.some(m => city.bestMonths.includes(m));
+          if (hasSeasonMatch) currentScore += 6; 
+          if (city.tags.type === userPreferences.type) currentScore += 5;
+
+          const cityBudget = Number(city.budget);
+          const userBudget = Number(userPreferences.budget);
+          if (cityBudget <= userBudget) currentScore += 8; 
+          else if (cityBudget - userBudget === 1) currentScore += 3;
+
+          if (city.tags.mood === userPreferences.mood) currentScore += 3;
+          if (city.tags.age === userPreferences.age) currentScore += 3;
         }
 
-        if (city.tags.mood === userPreferences.mood) currentScore += 3;
-        if (city.tags.age === userPreferences.age) currentScore += 3;
-
         const finalPercentage = Math.min(Math.round((currentScore / MAX_ALLOWED_SCORE) * 100), 100);
-        return { ...city, matchScore: finalPercentage };
+        return { 
+          ...city, 
+          matchScore: finalPercentage, 
+          groupReasons: isGroupMode ? groupReasons : [] 
+        };
       })
-      .filter(city => city.matchScore >= 20) 
+      .filter(city => city.matchScore >= 20 && !city.isVetoed) 
       .sort((a, b) => b.matchScore - a.matchScore);
-  }, [userPreferences]);
+  }, [userPreferences, groupParticipants, isGroupMode]);
 
   const themeClasses = `${darkMode ? 'dark bg-[#0b0e11]' : 'bg-slate-50'} transition-colors duration-500`;
 
@@ -56,13 +117,20 @@ function App() {
   
   const handleFullReset = () => {
     setUserPreferences(null);
+    setGroupParticipants([]);
+    setIsGroupMode(false);
     setSelectedCity(null);
     setView('welcome');
   };
 
   const handleResetQuiz = () => {
-    setUserPreferences(null);
-    setView('quiz');
+    if (isGroupMode) {
+        setCurrentParticipantIndex(0);
+        setView('quiz');
+    } else {
+        setUserPreferences(null);
+        setView('quiz');
+    }
   };
 
   // --- RENDERING CONDIZIONALE ---
@@ -70,20 +138,54 @@ function App() {
   if (view === 'welcome') {
     return (
       <WelcomeScreen 
-        onStart={() => setView('quiz')} 
+        onStart={() => {
+            setIsGroupMode(false);
+            setView('quiz');
+        }} 
+        onStartGroup={() => setView('group-lobby')}
         onExploreGallery={() => setView('gallery')}
         darkMode={darkMode} 
       />
     );
   }
 
+  if (view === 'group-lobby') {
+    return (
+      <GroupManager 
+        darkMode={darkMode}
+        onBack={() => setView('welcome')}
+        onStartQuiz={(friends) => {
+          setGroupParticipants(friends);
+          setIsGroupMode(true);
+          setCurrentParticipantIndex(0);
+          setView('quiz');
+        }}
+      />
+    );
+  }
+
   if (view === 'quiz') {
+    const currentName = isGroupMode ? groupParticipants[currentParticipantIndex]?.name : "Te";
     return (
       <QuizScreen 
         darkMode={darkMode} 
+        participantName={currentName}
+        isGroupMode={isGroupMode}
         onFinish={(prefs) => {
-          setUserPreferences(prefs);
-          setView('home');
+          if (isGroupMode) {
+            const updatedGroup = [...groupParticipants];
+            updatedGroup[currentParticipantIndex].prefs = prefs;
+            setGroupParticipants(updatedGroup);
+
+            if (currentParticipantIndex < groupParticipants.length - 1) {
+              setCurrentParticipantIndex(currentParticipantIndex + 1);
+            } else {
+              setView('home');
+            }
+          } else {
+            setUserPreferences(prefs);
+            setView('home');
+          }
         }} 
       />
     );
@@ -97,7 +199,7 @@ function App() {
         onBack={() => setView('welcome')}
         onSelectCity={(city) => {
           setSelectedCity(city);
-          setLastView('gallery'); // SALVA LA PROVENIENZA
+          setLastView('gallery');
           setView('report');
         }}
         toggleTheme={() => setDarkMode(!darkMode)}
@@ -110,9 +212,20 @@ function App() {
       <CityReport 
         city={selectedCity} 
         darkMode={darkMode} 
-        // TORNA ALLA VISTA PRECEDENTE (Gallery o Map)
         onBack={() => setView(lastView)} 
         onGoHome={handleFullReset}
+      />
+    );
+  }
+
+  // FIX: Spostiamo la logica di BattleMode all'interno del flusso principale di rendering
+  if (view === 'battle') {
+    return (
+      <BattleMode 
+        cities={recommendedCities}
+        participants={groupParticipants.length > 0 ? groupParticipants : [{name: 'Utente 1'}]}
+        darkMode={darkMode}
+        onBack={() => setView('home')}
       />
     );
   }
@@ -126,9 +239,12 @@ function App() {
           <HomeOverview
             onGoToMap={() => setView('map')}
             onResetQuiz={handleResetQuiz}
+            onStartBattle={() => setView('battle')} 
             toggleTheme={() => setDarkMode(!darkMode)}
             darkMode={darkMode}
-            userPrefs={userPreferences}
+            userPrefs={isGroupMode ? groupParticipants[0]?.prefs : userPreferences}
+            isGroup={isGroupMode}
+            participantsCount={groupParticipants.length}
             recommendedCount={recommendedCities.length}
             bestMatch={recommendedCities[0]}
             onLogoClick={handleFullReset}
@@ -147,10 +263,7 @@ function App() {
 
             <Sidebar
               cities={recommendedCities} 
-              onSelectCity={(city) => {
-                  setSelectedCity(city);
-                  // Opzionale: se selezioni dalla sidebar, chiudi dettagli o rimani in map
-              }}
+              onSelectCity={setSelectedCity}
               onGoHome={() => setView('home')}
               onLogoClick={handleFullReset}
               darkMode={darkMode}
@@ -170,7 +283,7 @@ function App() {
               onClose={() => setSelectedCity(null)}
               darkMode={darkMode}
               onViewReport={() => {
-                setLastView('map'); // SALVA LA PROVENIENZA
+                setLastView('map');
                 setView('report');
               }} 
             />

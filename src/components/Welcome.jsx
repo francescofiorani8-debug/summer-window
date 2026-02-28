@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const WelcomeScreen = ({ onStart, darkMode, onExploreGallery }) => {
+const WelcomeScreen = ({ onStart, darkMode, onExploreGallery, onStartGroup }) => {
   const [scrollY, setScrollY] = useState(0);
 
   // Gestione dello scroll per l'effetto parallasse
@@ -16,8 +16,15 @@ const WelcomeScreen = ({ onStart, darkMode, onExploreGallery }) => {
   }, []);
 
   // Classi comuni per le card per garantire coerenza visiva
-  const cardStyle = `text-center p-12 md:p-20 rounded-[4rem] border transition-all duration-1000 transform max-w-2xl w-full
-    ${darkMode ? 'bg-white/5 border-white/10' : 'bg-white border-slate-200 shadow-2xl'}`;
+  const cardStyle = `text-center p-12 md:p-20 rounded-[4rem] border transition-all duration-1000 transform max-w-2xl w-full z-10
+    ${darkMode ? 'bg-[#0b0e11]/60 backdrop-blur-xl border-white/10' : 'bg-white/80 backdrop-blur-md border-slate-200 shadow-2xl'}`;
+
+  // Definizione dei gradienti per la Sezione 3
+  // Dark: Da grigio scuro a viola/nero
+  // Light: Da bianco/grigio a un azzurro/viola chiarissimo
+  const section3Gradient = darkMode 
+    ? 'bg-gradient-to-b from-[#0b0e11] via-[#1a1333] to-[#0b0e11]' 
+    : 'bg-gradient-to-b from-white via-slate-100 to-slate-200';
 
   return (
     <div 
@@ -99,12 +106,12 @@ const WelcomeScreen = ({ onStart, darkMode, onExploreGallery }) => {
         </div>
       </section>
 
-      {/* SEZIONE 3: Doppia Card CTA */}
-      <section className="min-h-[120vh] flex flex-col items-center justify-center px-8 relative z-30 space-y-16 py-20">
+      {/* SEZIONE 3: Doppia Card CTA + Gradiente Dinamico */}
+      <section className={`min-h-[150vh] flex flex-col items-center justify-center px-8 relative z-30 space-y-16 py-32 transition-colors duration-1000 ${section3Gradient}`}>
         
-        {/* CARD 1: Box Principale Quiz (Focus) */}
+        {/* CARD 1: Box Principale Quiz */}
         <div 
-          className={`${cardStyle} ${scrollY > 1200 ? 'scale-100 opacity-100' : 'scale-90 opacity-0'}`}
+          className={`${cardStyle} ${scrollY > 1200 ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0'}`}
         >
           <h3 className="text-4xl md:text-6xl font-black mb-8 tracking-tighter">
             Pronto per il <br/> <span className="text-[#6d4aff]">prossimo capitolo</span>?
@@ -121,10 +128,10 @@ const WelcomeScreen = ({ onStart, darkMode, onExploreGallery }) => {
           </button>
         </div>
 
-        {/* CARD 2: Sezione Lasciati Ispirare (Alternativa) */}
+        {/* CARD 2: Sezione Lasciati Ispirare */}
         <div 
           className={`${cardStyle} transition-all duration-1000 delay-300
-            ${scrollY > 1350 ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}
+            ${scrollY > 1450 ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0'}`}
         >
           <h3 className="text-4xl md:text-6xl font-black mb-8 tracking-tighter">
             Vuoi solo <br/> <span className="text-[#00ffcc]">curiosare?</span>
@@ -133,15 +140,30 @@ const WelcomeScreen = ({ onStart, darkMode, onExploreGallery }) => {
             Esplora il database senza filtri
           </p>
           <button
-            onClick={onExploreGallery} // Navigazione verso la Gallery
+            onClick={onExploreGallery}
             className="bg-[#6d4aff] text-white px-16 py-8 rounded-3xl font-black text-3xl shadow-2xl shadow-[#6d4aff]/40 hover:bg-[#5a39e6] hover:scale-105 transition-all active:scale-95 group"
           >
-            <span className="text-xl group-hover:rotate-12 transition-transform">✨</span>
+            <span className="text-xl group-hover:rotate-12 transition-transform mr-2">✨</span>
             Lasciati Ispirare
             <span className="inline-block ml-4 group-hover:translate-x-2 transition-transform">→</span>
           </button>
         </div>
-        
+
+        {/* CARD 3: SOCIAL ROOM */}
+        <div className={`${cardStyle} transition-all duration-1000 delay-500
+          ${scrollY > 1700 ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0'}`}>
+          <h3 className="text-3xl md:text-5xl font-black mb-8 tracking-tighter">
+            Viaggio di <br /> <span className="text-[#6d4aff]">Gruppo?</span>
+          </h3>
+          <p className="mb-10 opacity-50 font-bold text-sm uppercase tracking-widest">Trova il punto d'incontro perfetto per tutti</p>
+          <button
+            onClick={onStartGroup}
+            className="bg-gradient-to-r from-[#6d4aff] to-[#00ffcc] text-white px-12 py-6 rounded-3xl font-black text-xl shadow-xl hover:scale-105 transition-all"
+          >
+            Crea Social Room 👥
+          </button>
+        </div>
+
         <footer className="pt-20 pb-10 opacity-20 text-[10px] uppercase tracking-widest font-black">
           SummerWindow Algorithm Research v1.0
         </footer>
