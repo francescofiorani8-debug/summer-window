@@ -1,6 +1,6 @@
 import React from 'react';
 
-const DetailsSidebar = ({ city, onClose, darkMode, onViewReport }) => {
+const DetailsSidebar = ({ city, onClose, darkMode, onViewReport, onGenerateItinerary }) => {
   // Se non c'è nessuna città selezionata, non renderizziamo nulla
   if (!city) return null;
 
@@ -58,12 +58,20 @@ const DetailsSidebar = ({ city, onClose, darkMode, onViewReport }) => {
             </div>
           </div>
 
-          {/* Call to Action */}
+          {/* Call to Action - AI Report */}
           <button 
             onClick={onViewReport}
             className="w-full py-5 bg-[#6d4aff] text-white rounded-2xl font-black text-xl shadow-xl shadow-[#6d4aff]/30 hover:bg-[#5a39e6] hover:scale-[1.02] transition-all active:scale-95"
           >
-          Visualizza AI Report
+            Visualizza AI Report
+          </button>
+
+          {/* Pulsante Genera Itinerario */}
+          <button
+            onClick={() => onGenerateItinerary(city)} 
+            className="w-full mt-4 bg-[#6d4aff] text-white py-3 rounded-xl font-bold uppercase text-[10px] hover:scale-[1.02] transition-all active:scale-95"
+          >
+            Genera Itinerario ✈️
           </button>
         </div>
 

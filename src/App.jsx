@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import MapComponent from './components/MapComponent';
 import WelcomeScreen from './components/Welcome';
@@ -9,6 +9,7 @@ import CityReport from './components/CityReport';
 import CityGallery from './components/CityGallery';
 import GroupManager from './components/GroupManager';
 import BattleMode from './components/BattleMode'; 
+import TravelPlanner from './components/TravelPlanner';
 import { hotCities } from './data/cities';
 
 function App() {
@@ -26,7 +27,23 @@ function App() {
   const [groupParticipants, setGroupParticipants] = useState([]); 
   const [currentParticipantIndex, setCurrentParticipantIndex] = useState(0);
 
-  // --- LOGICA DI SCORING AVANZATA (AI MATCHMAKING 2.0) ---
+  // --- STATI PER ITINERARIO ---
+  const [itineraryTarget, setItineraryTarget] = useState(null);
+
+  const openItinerary = (city) => {
+    setItineraryTarget(city);
+  };
+
+  // Blochiamo lo scroll del body quando l'itinerario è aperto
+  useEffect(() => {
+    if (itineraryTarget) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+  }, [itineraryTarget]);
+
+  // --- LOGICA DI SCORING AVANZATA ---
   const recommendedCities = useMemo(() => {
     if (!userPreferences && groupParticipants.length === 0) return hotCities;
 
@@ -43,13 +60,11 @@ function App() {
           
           if (numPeople === 0) return { ...city, matchScore: 0 };
 
-          // 1. SISTEMA DI VETO
           const isVetoed = allPrefs.some(pref => 
             pref.veto === city.tags.type || pref.veto === city.tags.mood
           );
           if (isVetoed) return { ...city, matchScore: 0, isVetoed: true };
 
-          // 2. BUDGET DI GRUPPO
           const groupBudgets = allPrefs.map(p => Number(p.budget));
           const minBudgetNeeded = Math.min(...groupBudgets);
           const cityBudget = Number(city.budget);
@@ -62,23 +77,12 @@ function App() {
             groupReasons.push("Leggero extra-budget per alcuni");
           }
 
-          // 3. MEDIAZIONE PREFERENZE
           let matches = { type: 0, season: 0, mood: 0 };
-
           allPrefs.forEach(pref => {
             const hasSeasonMatch = pref.periodMonths?.some(m => city.bestMonths.includes(m));
-            if (hasSeasonMatch) {
-                currentScore += (6 / numPeople);
-                matches.season++;
-            }
-            if (city.tags.type === pref.type) {
-                currentScore += (5 / numPeople);
-                matches.type++;
-            }
-            if (city.tags.mood === pref.mood) {
-                currentScore += (3 / numPeople);
-                matches.mood++;
-            }
+            if (hasSeasonMatch) { currentScore += (6 / numPeople); matches.season++; }
+            if (city.tags.type === pref.type) { currentScore += (5 / numPeople); matches.type++; }
+            if (city.tags.mood === pref.mood) { currentScore += (3 / numPeople); matches.mood++; }
             if (city.tags.age === pref.age) currentScore += (3 / numPeople);
           });
 
@@ -86,7 +90,6 @@ function App() {
           if (matches.season === numPeople) groupReasons.push(`Tutti sono liberi in questo periodo`);
 
         } else if (userPreferences) {
-          // --- LOGICA SINGOLO UTENTE ---
           const hasSeasonMatch = userPreferences.periodMonths?.some(m => city.bestMonths.includes(m));
           if (hasSeasonMatch) currentScore += 6; 
           if (city.tags.type === userPreferences.type) currentScore += 5;
@@ -114,12 +117,12 @@ function App() {
   const themeClasses = `${darkMode ? 'dark bg-[#0b0e11]' : 'bg-slate-50'} transition-colors duration-500`;
 
   // --- FUNZIONI DI NAVIGAZIONE ---
-  
   const handleFullReset = () => {
     setUserPreferences(null);
     setGroupParticipants([]);
     setIsGroupMode(false);
     setSelectedCity(null);
+    setItineraryTarget(null);
     setView('welcome');
   };
 
@@ -134,107 +137,84 @@ function App() {
   };
 
   // --- RENDERING CONDIZIONALE ---
-
   if (view === 'welcome') {
-    return (
-      <WelcomeScreen 
-        onStart={() => {
-            setIsGroupMode(false);
-            setView('quiz');
-        }} 
-        onStartGroup={() => setView('group-lobby')}
-        onExploreGallery={() => setView('gallery')}
-        darkMode={darkMode} 
-      />
-    );
+    return <WelcomeScreen onStart={() => { setIsGroupMode(false); setView('quiz'); }} onStartGroup={() => setView('group-lobby')} onExploreGallery={() => setView('gallery')} darkMode={darkMode} />;
   }
 
   if (view === 'group-lobby') {
-    return (
-      <GroupManager 
-        darkMode={darkMode}
-        onBack={() => setView('welcome')}
-        onStartQuiz={(friends) => {
-          setGroupParticipants(friends);
-          setIsGroupMode(true);
-          setCurrentParticipantIndex(0);
-          setView('quiz');
-        }}
-      />
-    );
+    return <GroupManager darkMode={darkMode} onBack={() => setView('welcome')} onStartQuiz={(friends) => { setGroupParticipants(friends); setIsGroupMode(true); setCurrentParticipantIndex(0); setView('quiz'); }} />;
   }
 
   if (view === 'quiz') {
     const currentName = isGroupMode ? groupParticipants[currentParticipantIndex]?.name : "Te";
-    return (
-      <QuizScreen 
-        darkMode={darkMode} 
-        participantName={currentName}
-        isGroupMode={isGroupMode}
-        onFinish={(prefs) => {
+    return <QuizScreen darkMode={darkMode} participantName={currentName} isGroupMode={isGroupMode} onFinish={(prefs) => {
           if (isGroupMode) {
             const updatedGroup = [...groupParticipants];
             updatedGroup[currentParticipantIndex].prefs = prefs;
             setGroupParticipants(updatedGroup);
-
-            if (currentParticipantIndex < groupParticipants.length - 1) {
-              setCurrentParticipantIndex(currentParticipantIndex + 1);
-            } else {
-              setView('home');
-            }
+            if (currentParticipantIndex < groupParticipants.length - 1) setCurrentParticipantIndex(currentParticipantIndex + 1);
+            else setView('home');
           } else {
             setUserPreferences(prefs);
             setView('home');
           }
         }} 
-      />
-    );
+      />;
   }
 
   if (view === 'gallery') {
-    return (
-      <CityGallery
-        cities={hotCities}
-        darkMode={darkMode}
-        onBack={() => setView('welcome')}
-        onSelectCity={(city) => {
-          setSelectedCity(city);
-          setLastView('gallery');
-          setView('report');
-        }}
-        toggleTheme={() => setDarkMode(!darkMode)}
-      />
-    );
+    return <CityGallery cities={hotCities} darkMode={darkMode} onBack={() => setView('welcome')} onSelectCity={(city) => { setSelectedCity(city); setLastView('gallery'); setView('report'); }} toggleTheme={() => setDarkMode(!darkMode)} />;
   }
 
   if (view === 'report' && selectedCity) {
-    return (
-      <CityReport 
-        city={selectedCity} 
-        darkMode={darkMode} 
-        onBack={() => setView(lastView)} 
-        onGoHome={handleFullReset}
-      />
-    );
+    return <CityReport city={selectedCity} darkMode={darkMode} onBack={() => setView(lastView)} onGoHome={handleFullReset} />;
   }
 
-  // FIX: Spostiamo la logica di BattleMode all'interno del flusso principale di rendering
   if (view === 'battle') {
-    return (
-      <BattleMode 
-        cities={recommendedCities}
-        participants={groupParticipants.length > 0 ? groupParticipants : [{name: 'Utente 1'}]}
-        darkMode={darkMode}
-        onBack={() => setView('home')}
-      />
-    );
+    return <BattleMode cities={recommendedCities} participants={groupParticipants.length > 0 ? groupParticipants : [{name: 'Utente 1'}]} darkMode={darkMode} onBack={() => setView('home')} onGenerateItinerary={openItinerary} />;
   }
 
   return (
     <div className={themeClasses}>
       <div className={`w-full relative ${view === 'map' ? 'h-screen overflow-hidden' : 'min-h-screen overflow-y-auto'}`}>
 
-        {/* VISTA HOME */}
+        {/* 1. OVERLAY GLOBALE ITINERARIO (Sopra a tutto) */}
+        {itineraryTarget && (
+          <div className="fixed inset-0 z-[9999] bg-[#0b0e11] flex flex-col animate-in slide-in-from-bottom duration-500 overflow-hidden">
+            {/* Navigazione Itinerario */}
+            <header className="flex-shrink-0 p-6 flex justify-between items-center border-b border-white/5 bg-[#0b0e11]/80 backdrop-blur-xl">
+              <div className="flex items-center gap-4">
+                <button 
+                  onClick={() => setItineraryTarget(null)}
+                  className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-white transition-colors"
+                >
+                  ←
+                </button>
+                <div>
+                  <h2 className="text-white font-black uppercase text-sm tracking-widest leading-none">
+                    {itineraryTarget.name}
+                  </h2>
+                  <p className="text-[#00ffcc] text-[9px] font-bold uppercase tracking-tighter mt-1">Esplorazione AI Generata</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setItineraryTarget(null)}
+                className="px-6 py-2.5 bg-[#6d4aff] text-white rounded-full font-black uppercase text-[10px] tracking-widest hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(109,74,255,0.4)]"
+              >
+                Torna alla Mappa
+              </button>
+            </header>
+
+            {/* Contenuto scrollabile */}
+            <div className="flex-1 overflow-y-auto px-6 py-10">
+              <div className="max-w-4xl mx-auto">
+                <TravelPlanner city={itineraryTarget} darkMode={true} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 2. VISTA HOME */}
         {view === 'home' && (
           <HomeOverview
             onGoToMap={() => setView('map')}
@@ -248,10 +228,11 @@ function App() {
             recommendedCount={recommendedCities.length}
             bestMatch={recommendedCities[0]}
             onLogoClick={handleFullReset}
+            onGenerateItinerary={openItinerary}
           />
         )}
 
-        {/* VISTA MAPPA */}
+        {/* 3. VISTA MAPPA */}
         {view === 'map' && (
           <div className="h-full w-full flex relative overflow-hidden">
             <button
@@ -282,10 +263,8 @@ function App() {
               city={selectedCity}
               onClose={() => setSelectedCity(null)}
               darkMode={darkMode}
-              onViewReport={() => {
-                setLastView('map');
-                setView('report');
-              }} 
+              onViewReport={() => { setLastView('map'); setView('report'); }} 
+              onGenerateItinerary={openItinerary}
             />
           </div>
         )}

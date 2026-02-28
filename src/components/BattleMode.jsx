@@ -3,11 +3,9 @@ import TravelPlanner from './TravelPlanner';
 
 /**
  * BattleMode con “morph to center” + flip:
- * - Click su card -> la card “vola” al centro (morph: posizione+size)
- * - Poi fa flip automatico per mostrare il back
- * - Chiusura: click sulla card (front o back) O click fuori -> reverse morph e ritorno alla posizione originale
- *
- * Nessuna libreria esterna: solo DOMRect + CSS transform.
+ * - Gestione votazione tra due città
+ * - Celebrazione vincitore
+ * - Schermata Itinerario dedicata con tasto Home
  */
 const BattleMode = ({ cities, onBack, darkMode, participants = [] }) => {
   const [votesHistory, setVotesHistory] = useState([]);
@@ -16,10 +14,11 @@ const BattleMode = ({ cities, onBack, darkMode, participants = [] }) => {
 
   const [hasWinner, setHasWinner] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [showItinerary, setShowItinerary] = useState(false);
 
   // Shared element overlay
-  const [activeCard, setActiveCard] = useState(null); // 'cityA' | 'cityB' | null
-  const [phase, setPhase] = useState("idle"); // idle | morphing | open | closing
+  const [activeCard, setActiveCard] = useState(null); 
+  const [phase, setPhase] = useState("idle"); 
   const [isFlipped, setIsFlipped] = useState(false);
 
   const cityA = cities?.[0];
@@ -38,16 +37,10 @@ const BattleMode = ({ cities, onBack, darkMode, participants = [] }) => {
     return activeCard === "cityA" ? cityA : cityB;
   }, [activeCard, cityA, cityB]);
 
-  // refs ai DOM delle due card (per leggere il rect al click)
   const cardRefs = useRef({ cityA: null, cityB: null });
-
-  // rect della card cliccata (posizione iniziale e di ritorno)
   const [fromRect, setFromRect] = useState(null);
-
-  // stile dinamico del “clone” che morph-a
   const [cloneStyle, setCloneStyle] = useState(null);
 
-  // chiusura con ESC
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === "Escape" && activeCard) closeOverlay();
@@ -56,26 +49,20 @@ const BattleMode = ({ cities, onBack, darkMode, participants = [] }) => {
     return () => window.removeEventListener("keydown", onKey);
   }, [activeCard]);
 
-  // blocca scroll quando overlay aperto
   useEffect(() => {
     if (!activeCard) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
+    return () => { document.body.style.overflow = prev; };
   }, [activeCard]);
 
   useEffect(() => {
     if (!hasWinner) return;
-    const timer = setTimeout(() => setShowDetails(true), 2000);
+    const timer = setTimeout(() => setShowDetails(true), 1500);
     return () => clearTimeout(timer);
   }, [hasWinner]);
 
-  const handleSelect = (target) => {
-    if (isVotingFinished) return;
-    setCurrentVote(target);
-  };
+  const handleSelect = (target) => { if (!isVotingFinished) setCurrentVote(target); };
 
   const confirmVote = () => {
     if (!currentVote) return;
@@ -94,7 +81,6 @@ const BattleMode = ({ cities, onBack, darkMode, participants = [] }) => {
   const finishBattle = () => {
     const countA = votesHistory.filter((v) => v === "cityA").length;
     const countB = votesHistory.filter((v) => v === "cityB").length;
-
     if (countA === countB) {
       setHasWinner((cityA?.matchScore ?? 0) >= (cityB?.matchScore ?? 0) ? cityA : cityB);
     } else {
@@ -103,170 +89,85 @@ const BattleMode = ({ cities, onBack, darkMode, participants = [] }) => {
   };
 
   const openOverlay = (type) => {
-    if (!cityA || !cityB) return;
     const el = cardRefs.current?.[type];
     if (!el) return;
-
-    const rect = el.getBoundingClientRect();
-    setFromRect(rect);
+    setFromRect(el.getBoundingClientRect());
     setActiveCard(type);
-
     setIsFlipped(false);
     setPhase("morphing");
   };
 
   const closeOverlay = () => {
-    if (!activeCard) return;
     setIsFlipped(false);
     setPhase("closing");
   };
 
-  /**
-   * Quando si apre: posiziona clone sopra la card e nel frame successivo lo anima al centro.
-   * (layout effect per evitare flicker)
-   */
   useLayoutEffect(() => {
     if (!activeCard || !fromRect) return;
-
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-
     const targetW = Math.min(480, vw - 48);
     const targetH = Math.min(Math.round(vh * 0.72), 680);
-
     const toLeft = (vw - targetW) / 2;
     const toTop = (vh - targetH) / 2;
 
-    // stile iniziale (sopra la card)
     setCloneStyle({
-      top: fromRect.top,
-      left: fromRect.left,
-      width: fromRect.width,
-      height: fromRect.height,
-      borderRadius: "2.5rem",
-      opacity: 1,
+      top: fromRect.top, left: fromRect.left,
+      width: fromRect.width, height: fromRect.height,
+      borderRadius: "2.5rem", opacity: 1,
     });
 
-    // anima al centro
     const raf = requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         setCloneStyle((s) => ({
-          ...(s || {}),
-          top: toTop,
-          left: toLeft,
-          width: targetW,
-          height: targetH,
-          opacity: 1,
+          ...s, top: toTop, left: toLeft, width: targetW, height: targetH, opacity: 1,
         }));
       });
     });
-
     return () => cancelAnimationFrame(raf);
   }, [activeCard, fromRect]);
 
-  /**
-   * Reverse morph quando phase diventa "closing"
-   */
   useEffect(() => {
-    if (phase !== "closing") return;
-    if (!activeCard) return;
-
-    const el = cardRefs.current?.[activeCard];
-    if (!el) {
-      // fallback
-      setActiveCard(null);
-      setFromRect(null);
-      setCloneStyle(null);
-      setPhase("idle");
-      return;
+    if (phase !== "closing" || !activeCard) return;
+    const rect = cardRefs.current?.[activeCard]?.getBoundingClientRect();
+    if (rect) {
+      setCloneStyle((s) => ({
+        ...s, top: rect.top, left: rect.left, width: rect.width, height: rect.height, opacity: 1,
+      }));
     }
-
-    const rect = el.getBoundingClientRect();
-    setCloneStyle((s) => ({
-      ...(s || {}),
-      top: rect.top,
-      left: rect.left,
-      width: rect.width,
-      height: rect.height,
-      opacity: 1,
-    }));
   }, [phase, activeCard]);
 
-  /**
-   * Quando finisce la transition del clone:
-   * - se stiamo morphando -> flip automatico
-   * - se stiamo chiudendo -> pulizia overlay
-   */
   const handleCloneTransitionEnd = (e) => {
     if (e.propertyName !== "top") return;
-
     if (phase === "morphing") {
-      // flip automatico appena centrato
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => setIsFlipped(true));
-      });
+      requestAnimationFrame(() => requestAnimationFrame(() => setIsFlipped(true)));
       setPhase("open");
     }
-
     if (phase === "closing") {
-      setActiveCard(null);
-      setFromRect(null);
-      setCloneStyle(null);
-      setPhase("idle");
-      setIsFlipped(false);
+      setActiveCard(null); setFromRect(null); setCloneStyle(null);
+      setPhase("idle"); setIsFlipped(false);
     }
   };
 
   const RenderGridCard = (city, type) => {
     const isSelected = currentVote === type;
-
     return (
-      <div
-        className={`flex-1 flex flex-col items-center gap-4 transition-all duration-500 ${
-          activeCard ? "opacity-20 blur-md scale-95 pointer-events-none" : "z-10"
-        }`}
-      >
+      <div className={`flex-1 flex flex-col items-center gap-4 transition-all duration-500 ${activeCard ? "opacity-20 blur-md scale-95 pointer-events-none" : "z-10"}`}>
         <div
           ref={(node) => (cardRefs.current[type] = node)}
           onClick={() => openOverlay(type)}
           className={`relative w-full h-[45vh] rounded-[2.5rem] overflow-hidden border-4 transition-all cursor-pointer hover:scale-[1.02] active:scale-95
-            ${
-              isSelected
-                ? type === "cityA"
-                  ? "border-[#6d4aff] shadow-[0_0_30px_#6d4aff]"
-                  : "border-[#00ffcc] shadow-[0_0_30px_#00ffcc]"
-                : "border-transparent shadow-xl"
-            }`}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") openOverlay(type);
-          }}
+            ${isSelected ? (type === "cityA" ? "border-[#6d4aff] shadow-[0_0_30px_#6d4aff]" : "border-[#00ffcc] shadow-[0_0_30px_#00ffcc]") : "border-transparent shadow-xl"}`}
         >
-          <img src={getCityImage(city)} className="w-full h-full object-cover" alt={city?.name || "city"} />
+          <img src={getCityImage(city)} className="w-full h-full object-cover" alt={city?.name} />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
           <div className="absolute bottom-6 left-6 text-white text-left">
             <h3 className="text-2xl font-black uppercase italic leading-none">{city?.name}</h3>
-            <span className={`text-[10px] font-bold uppercase tracking-widest ${type === "cityA" ? "text-[#6d4aff]" : "text-[#00ffcc]"}`}>
-              Info Card
-            </span>
+            <span className={`text-[10px] font-bold uppercase tracking-widest ${type === "cityA" ? "text-[#6d4aff]" : "text-[#00ffcc]"}`}>Info Card</span>
           </div>
         </div>
-
         {!isVotingFinished && (
-          <button
-            onClick={() => handleSelect(type)}
-            className={`w-full py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all
-              ${
-                isSelected
-                  ? type === "cityA"
-                    ? "bg-[#6d4aff] text-white"
-                    : "bg-[#00ffcc] text-black"
-                  : darkMode
-                  ? "bg-white/5 text-white/40 hover:bg-white/10"
-                  : "bg-slate-200 text-slate-500 hover:bg-slate-300"
-              }`}
-          >
+          <button onClick={() => handleSelect(type)} className={`w-full py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all ${isSelected ? (type === "cityA" ? "bg-[#6d4aff] text-white" : "bg-[#00ffcc] text-black") : (darkMode ? "bg-white/5 text-white/40 hover:bg-white/10" : "bg-slate-200 text-slate-500 hover:bg-slate-300")}`}>
             {isSelected ? "✓ Selezionato" : "Vota"}
           </button>
         )}
@@ -274,71 +175,93 @@ const BattleMode = ({ cities, onBack, darkMode, participants = [] }) => {
     );
   };
 
+  // --- RENDERING 1: SCHERMATA ITINERARIO (FULL SCREEN) ---
+  if (hasWinner && showItinerary) {
+    return (
+      <div className={`min-h-screen w-full flex flex-col p-6 animate-in fade-in duration-700 ${darkMode ? "bg-[#0b0e11] text-white" : "bg-slate-50 text-slate-900"}`}>
+        <div className="max-w-4xl mx-auto w-full">
+          {/* Header Itinerario */}
+          <div className="flex justify-between items-center mb-8">
+            <button 
+              onClick={() => setShowItinerary(false)} 
+              className="font-black uppercase tracking-widest text-[10px] opacity-40 hover:opacity-100 flex items-center gap-2"
+            >
+              ← Verdetto
+            </button>
+            <div className="text-center">
+              <h2 className="text-[10px] font-black uppercase tracking-[0.4em] opacity-40">Trip Itinerary</h2>
+              <h1 className="text-2xl font-black italic uppercase text-[#6d4aff]">{hasWinner.name}</h1>
+            </div>
+            <button 
+              onClick={onBack} 
+              className="bg-[#6d4aff] text-white px-4 py-2 rounded-xl font-black uppercase text-[9px] tracking-widest shadow-lg hover:scale-105 transition-all"
+            >
+              Nuova Ricerca 🏠
+            </button>
+          </div>
+
+          <TravelPlanner city={hasWinner} darkMode={darkMode} />
+          
+          <div className="mt-12 mb-8 text-center">
+            <button onClick={onBack} className="text-[10px] font-black uppercase tracking-[0.5em] opacity-20 hover:opacity-100 transition-all">
+              Reset Battle Mode
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // --- RENDERING 2: SCHERMATA VINCITORE (CELEBRAZIONE) ---
   if (hasWinner) {
     return (
-      <div className={`min-h-screen w-full flex flex-col items-center p-6 transition-colors duration-1000 ${darkMode ? "bg-[#0b0e11]" : "bg-white"}`}>
-        <div className={`flex flex-col md:flex-row items-center justify-center gap-12 w-full max-w-6xl transition-all duration-1000 ease-in-out`}>
+      <div className={`min-h-screen w-full flex flex-col items-center justify-center p-6 transition-colors duration-1000 ${darkMode ? "bg-[#0b0e11]" : "bg-white"}`}>
+        <div className="flex flex-col md:flex-row items-center justify-center gap-12 w-full max-w-6xl">
+          
           <div className={`flex flex-col items-center text-center transition-all duration-1000 ${showDetails ? "md:w-1/2 scale-90" : "w-full scale-100"}`}>
             <h2 className={`text-[10px] font-black uppercase tracking-[0.5em] opacity-50 mb-2 ${darkMode ? "text-white" : "text-black"}`}>The Winner is</h2>
             <h1 className="text-5xl md:text-7xl font-black italic text-transparent bg-clip-text bg-gradient-to-r from-[#6d4aff] to-[#00ffcc] uppercase leading-none mb-6">
               {hasWinner?.name}
             </h1>
             <div className="relative inline-block">
-              <img
-                src={getCityImage(hasWinner)}
-                className="w-64 h-64 md:w-80 md:h-80 object-cover rounded-[3rem] shadow-[0_20px_50px_rgba(109,74,255,0.3)] border-4 border-[#6d4aff]"
-                alt={hasWinner?.name || "winner"}
-              />
-              <div className="absolute -top-6 -right-6 bg-[#6d4aff] text-white w-16 h-16 rounded-full flex items-center justify-center text-3xl animate-bounce shadow-xl">
-                🏆
-              </div>
+              <img src={getCityImage(hasWinner)} className="w-64 h-64 md:w-80 md:h-80 object-cover rounded-[3rem] shadow-[0_20px_50px_rgba(109,74,255,0.3)] border-4 border-[#6d4aff]" alt={hasWinner?.name} />
+              <div className="absolute -top-6 -right-6 bg-[#6d4aff] text-white w-16 h-16 rounded-full flex items-center justify-center text-3xl animate-bounce shadow-xl">🏆</div>
             </div>
           </div>
 
-        {/* Dettagli e Pulsante Torna alla Dashboard */}
-          <div
-            className={`transition-all duration-1000 delay-300 flex flex-col justify-center ${
-              showDetails ? "opacity-100 translate-x-0 md:w-1/2" : "opacity-0 translate-x-20 pointer-events-none w-0 h-0 overflow-hidden"
-            }`}
-          >
+          <div className={`transition-all duration-1000 delay-300 flex flex-col justify-center ${showDetails ? "opacity-100 translate-x-0 md:w-1/2" : "opacity-0 translate-x-20 pointer-events-none w-0 h-0 overflow-hidden"}`}>
             <div className={`p-8 rounded-[2.5rem] border ${darkMode ? "bg-white/5 border-white/10 text-white" : "bg-slate-50 border-slate-200 text-slate-900"}`}>
               <h3 className="text-2xl font-black uppercase italic mb-4 text-[#6d4aff]">Il verdetto finale</h3>
               <p className="text-sm leading-relaxed mb-6 font-medium opacity-80">
-                {hasWinner?.description || `${hasWinner?.name} è stata scelta dalla maggioranza del gruppo.`}
+                {hasWinner?.description || `${hasWinner?.name} è stata scelta dalla maggioranza del gruppo come meta ideale.`}
               </p>
-              <button onClick={onBack} className="w-full bg-[#6d4aff] text-white px-6 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg">
-                Torna alla Dashboard
-              </button>
+              
+              <div className="flex flex-col gap-3">
+                <button 
+                  onClick={() => setShowItinerary(true)} 
+                  className="w-full bg-[#6d4aff] text-white px-6 py-5 rounded-2xl font-black uppercase text-xs tracking-widest shadow-[0_10px_20px_rgba(109,74,255,0.3)] hover:scale-[1.02] transition-all border-b-4 border-black/20"
+                >
+                  Genera Itinerario ✈️
+                </button>
+                <button onClick={onBack} className="w-full py-4 font-black uppercase text-[10px] tracking-widest opacity-40 hover:opacity-100 transition-all">
+                  Torna alla Dashboard
+                </button>
+              </div>
             </div>
           </div>
         </div>
-        {/* --- NUOVA PARTE: SMART ITINERARY --- */}
-        {showDetails && (
-          <div className="w-full max-w-4xl animate-fade-in delay-700">
-             <TravelPlanner city={hasWinner} darkMode={darkMode} />
-          </div>
-        )}
       </div>
     );
   }
 
+  // --- RENDERING 3: GRIGLIA BATTAGLIA (DEFAULT) ---
   return (
     <div className={`h-screen max-h-screen p-4 flex flex-col overflow-hidden transition-colors duration-700 ${darkMode ? "bg-[#0b0e11] text-white" : "bg-slate-50 text-black"}`}>
       <div className="flex justify-between items-center mb-2 z-10">
-        <button onClick={onBack} className="font-black uppercase tracking-widest text-[10px] opacity-30 hover:opacity-100 transition-all">
-          ← Esci
-        </button>
-
-        <button
-          onClick={undoVote}
-          disabled={currentVoterIndex === 0}
-          className={`flex items-center gap-2 font-black uppercase text-[10px] transition-all ${
-            currentVoterIndex === 0 ? "opacity-0 pointer-events-none" : "opacity-50 hover:opacity-100"
-          }`}
-        >
+        <button onClick={onBack} className="font-black uppercase tracking-widest text-[10px] opacity-30 hover:opacity-100 transition-all">← Esci</button>
+        <button onClick={undoVote} disabled={currentVoterIndex === 0} className={`flex items-center gap-2 font-black uppercase text-[10px] transition-all ${currentVoterIndex === 0 ? "opacity-0 pointer-events-none" : "opacity-50 hover:opacity-100"}`}>
           <span className="text-lg">⟲</span> Undo
         </button>
-
         <div className="w-12"></div>
       </div>
 
@@ -360,20 +283,11 @@ const BattleMode = ({ cities, onBack, darkMode, participants = [] }) => {
 
       <div className={`py-6 flex flex-col items-center transition-opacity duration-500 ${activeCard ? "opacity-0 pointer-events-none" : "opacity-100"}`}>
         {!isVotingFinished ? (
-          <button
-            onClick={confirmVote}
-            disabled={!currentVote}
-            className={`px-12 py-5 rounded-full font-black text-sm uppercase tracking-[0.2em] transition-all shadow-2xl ${
-              currentVote ? "bg-[#6d4aff] text-white scale-105 active:scale-95" : "bg-zinc-800 text-zinc-600 cursor-not-allowed opacity-50"
-            }`}
-          >
+          <button onClick={confirmVote} disabled={!currentVote} className={`px-12 py-5 rounded-full font-black text-sm uppercase tracking-[0.2em] transition-all shadow-2xl ${currentVote ? "bg-[#6d4aff] text-white scale-105 active:scale-95" : "bg-zinc-800 text-zinc-600 cursor-not-allowed opacity-50"}`}>
             Conferma Voto
           </button>
         ) : (
-          <button
-            onClick={finishBattle}
-            className="px-12 py-5 bg-gradient-to-r from-[#6d4aff] to-[#00ffcc] text-white rounded-full font-black text-sm uppercase tracking-[0.2em] animate-pulse shadow-2xl"
-          >
+          <button onClick={finishBattle} className="px-12 py-5 bg-gradient-to-r from-[#6d4aff] to-[#00ffcc] text-white rounded-full font-black text-sm uppercase tracking-[0.2em] animate-pulse shadow-2xl">
             Scopri il Vincitore 🏆
           </button>
         )}
@@ -382,54 +296,32 @@ const BattleMode = ({ cities, onBack, darkMode, participants = [] }) => {
       {/* OVERLAY + SHARED ELEMENT MORPH */}
       {activeCard && overlayCity && cloneStyle && (
         <div className="fixed inset-0 z-[200]">
-          {/* backdrop: click fuori chiude */}
           <div className="absolute inset-0 bg-black/70 backdrop-blur-xl" onClick={closeOverlay} />
-
-          {/* CLONE: click sulla card chiude */}
           <div
             className="fixed"
             style={{
-              top: cloneStyle.top,
-              left: cloneStyle.left,
-              width: cloneStyle.width,
-              height: cloneStyle.height,
-              borderRadius: cloneStyle.borderRadius,
-              opacity: cloneStyle.opacity,
-              transition:
-                phase === "morphing" || phase === "closing"
-                  ? "top 520ms cubic-bezier(0.2, 0.9, 0.2, 1), left 520ms cubic-bezier(0.2, 0.9, 0.2, 1), width 520ms cubic-bezier(0.2, 0.9, 0.2, 1), height 520ms cubic-bezier(0.2, 0.9, 0.2, 1)"
-                  : "none",
-              boxShadow: "0 30px 80px rgba(0,0,0,0.55)",
-              transform: "translateZ(0)",
-              cursor: "pointer",
+              top: cloneStyle.top, left: cloneStyle.left, width: cloneStyle.width, height: cloneStyle.height,
+              borderRadius: cloneStyle.borderRadius, opacity: cloneStyle.opacity,
+              transition: phase === "morphing" || phase === "closing" ? "all 520ms cubic-bezier(0.2, 0.9, 0.2, 1)" : "none",
+              boxShadow: "0 30px 80px rgba(0,0,0,0.55)", transform: "translateZ(0)", cursor: "pointer",
             }}
             onTransitionEnd={handleCloneTransitionEnd}
             onClick={closeOverlay}
           >
             <div className="w-full h-full perspective-1000">
               <div className={`relative w-full h-full preserve-3d transition-transform duration-[900ms] ${isFlipped ? "rotate-y-180" : ""}`}>
-                {/* FRONT */}
                 <div className="absolute inset-0 backface-hidden rounded-[2.5rem] overflow-hidden border-4 border-white/15">
-                  <img src={getCityImage(overlayCity)} className="w-full h-full object-cover" alt={overlayCity?.name || "city"} />
+                  <img src={getCityImage(overlayCity)} className="w-full h-full object-cover" alt={overlayCity?.name} />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-black/10" />
                   <div className="absolute bottom-6 left-6 text-white">
                     <div className="text-[10px] font-black uppercase tracking-[0.4em] opacity-70 mb-2">Info Card</div>
                     <div className="text-3xl font-black uppercase italic leading-none">{overlayCity?.name}</div>
                   </div>
                 </div>
-
-                {/* BACK */}
-                <div
-                  className={`absolute inset-0 rotate-y-180 backface-hidden rounded-[2.5rem] p-8 flex flex-col justify-between border-4
-                    ${darkMode ? "bg-[#15191d] border-[#6d4aff]/30 text-white" : "bg-white border-slate-200 text-black"}`}
-                >
+                <div className={`absolute inset-0 rotate-y-180 backface-hidden rounded-[2.5rem] p-8 flex flex-col justify-between border-4 ${darkMode ? "bg-[#15191d] border-[#6d4aff]/30 text-white" : "bg-white border-slate-200 text-black"}`}>
                   <div>
                     <h3 className="text-3xl font-black uppercase italic leading-tight text-[#6d4aff] mb-6">{overlayCity?.name}</h3>
-
-                    <p className="text-sm leading-relaxed opacity-80 mb-8 font-medium">
-                      {overlayCity?.description || "Meta esclusiva analizzata per il tuo gruppo."}
-                    </p>
-
+                    <p className="text-sm leading-relaxed opacity-80 mb-8 font-medium">{overlayCity?.description || "Meta esclusiva analizzata per il tuo gruppo."}</p>
                     <div className="space-y-5">
                       {[
                         { label: "Match Score", val: `${overlayCity?.matchScore ?? 0}%`, color: "text-[#00ffcc]" },
@@ -443,12 +335,7 @@ const BattleMode = ({ cities, onBack, darkMode, participants = [] }) => {
                       ))}
                     </div>
                   </div>
-
-                  <div
-                    className={`rounded-2xl py-3 text-[9px] font-black opacity-60 text-center uppercase tracking-[0.2em] ${
-                      darkMode ? "bg-white/5" : "bg-slate-50"
-                    }`}
-                  >
+                  <div className={`rounded-2xl py-3 text-[9px] font-black opacity-60 text-center uppercase tracking-[0.2em] ${darkMode ? "bg-white/5" : "bg-slate-50"}`}>
                     Clicca la card o fuori per chiudere
                   </div>
                 </div>
