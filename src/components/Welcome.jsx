@@ -15,6 +15,10 @@ const WelcomeScreen = ({ onStart, darkMode, onExploreGallery }) => {
     }
   }, []);
 
+  // Classi comuni per le card per garantire coerenza visiva
+  const cardStyle = `text-center p-12 md:p-20 rounded-[4rem] border transition-all duration-1000 transform max-w-2xl w-full
+    ${darkMode ? 'bg-white/5 border-white/10' : 'bg-white border-slate-200 shadow-2xl'}`;
+
   return (
     <div 
       id="welcome-container"
@@ -95,14 +99,12 @@ const WelcomeScreen = ({ onStart, darkMode, onExploreGallery }) => {
         </div>
       </section>
 
-      {/* SEZIONE 3: Il Tasto Finale & Gallery Access */}
-      <section className="min-h-screen flex flex-col items-center justify-center px-8 relative z-30 space-y-12">
+      {/* SEZIONE 3: Doppia Card CTA */}
+      <section className="min-h-[120vh] flex flex-col items-center justify-center px-8 relative z-30 space-y-16 py-20">
         
-        {/* Box Principale CTA Quiz */}
+        {/* CARD 1: Box Principale Quiz (Focus) */}
         <div 
-          className={`text-center p-12 md:p-20 rounded-[4rem] border transition-all duration-1000 transform
-            ${scrollY > 1200 ? 'scale-100 opacity-100' : 'scale-90 opacity-0'}
-            ${darkMode ? 'bg-white/5 border-white/10' : 'bg-white border-slate-200 shadow-2xl'}`}
+          className={`${cardStyle} ${scrollY > 1200 ? 'scale-100 opacity-100' : 'scale-90 opacity-0'}`}
         >
           <h3 className="text-4xl md:text-6xl font-black mb-8 tracking-tighter">
             Pronto per il <br/> <span className="text-[#6d4aff]">prossimo capitolo</span>?
@@ -112,34 +114,32 @@ const WelcomeScreen = ({ onStart, darkMode, onExploreGallery }) => {
           </p>
           <button 
             onClick={onStart}
-            className="bg-[#6d4aff] text-white px-12 py-6 rounded-3xl font-black text-2xl shadow-2xl shadow-[#6d4aff]/40 hover:bg-[#5a39e6] hover:scale-105 transition-all active:scale-95 group"
+            className="bg-[#6d4aff] text-white px-16 py-8 rounded-3xl font-black text-3xl shadow-2xl shadow-[#6d4aff]/40 hover:bg-[#5a39e6] hover:scale-105 transition-all active:scale-95 group"
           >
             Personalizza l'esperienza 
             <span className="inline-block ml-4 group-hover:translate-x-2 transition-transform">→</span>
           </button>
         </div>
 
-        {/* SEZIONE DISTACCATA: Lasciati Ispirare */}
+        {/* CARD 2: Sezione Lasciati Ispirare (Alternativa) */}
         <div 
-          className={`flex flex-col items-center gap-6 transition-all duration-1000 delay-300
-            ${scrollY > 1300 ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}
+          className={`${cardStyle} transition-all duration-1000 delay-300
+            ${scrollY > 1350 ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}
         >
-          <div className="w-12 h-px bg-current opacity-20"></div>
-          
+          <h3 className="text-4xl md:text-6xl font-black mb-8 tracking-tighter">
+            Vuoi solo <br/> <span className="text-[#00ffcc]">curiosare?</span>
+          </h3>
+          <p className="mb-12 opacity-60 font-bold text-lg uppercase tracking-widest">
+            Esplora il database senza filtri
+          </p>
           <button
-            onClick={onExploreGallery}
-            className={`group flex items-center gap-3 px-10 py-5 border-2 rounded-2xl font-black text-lg uppercase tracking-widest transition-all
-              ${darkMode 
-                ? 'border-white/10 text-white hover:border-[#6d4aff] hover:bg-[#6d4aff]/5' 
-                : 'border-slate-200 text-slate-900 hover:border-[#76c876] hover:bg-slate-100'}`}
+            onClick={onExploreGallery} // Navigazione verso la Gallery
+            className="bg-[#6d4aff] text-white px-16 py-8 rounded-3xl font-black text-3xl shadow-2xl shadow-[#6d4aff]/40 hover:bg-[#5a39e6] hover:scale-105 transition-all active:scale-95 group"
           >
             <span className="text-xl group-hover:rotate-12 transition-transform">✨</span>
             Lasciati Ispirare
+            <span className="inline-block ml-4 group-hover:translate-x-2 transition-transform">→</span>
           </button>
-
-          <p className="opacity-40 text-[10px] uppercase tracking-[0.3em] font-bold">
-            Esplora il database senza filtri
-          </p>
         </div>
         
         <footer className="pt-20 pb-10 opacity-20 text-[10px] uppercase tracking-widest font-black">
