@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 const HomeOverview = ({ 
   onGoToMap, 
   onResetQuiz, 
-  onStartBattle, // Ricevuta da App.jsx
+  onStartBattle, 
   toggleTheme, 
   darkMode, 
   userPrefs, 
@@ -101,11 +101,14 @@ const HomeOverview = ({
                 ? "Abbiamo trovato il punto d'incontro perfetto!" 
                 : "Ottimo! Abbiamo analizzato il tuo profilo."}
               <br/>
-              Ci sono <span className="text-[#6d4aff]">{recommendedCount} mete</span> compatibili al 100%.
+              Ci sono <span className="text-[#6d4aff]">{recommendedCount} mete</span> compatibili con un match del <span className="text-[#00ffcc]">{bestMatch?.matchScore || 0}%</span>.
             </p>
 
             {bestMatch && (
               <div className="mt-8 p-8 rounded-[3rem] border border-white/5 bg-white/5 backdrop-blur-sm relative group overflow-hidden">
+                <div className="absolute top-4 right-8 bg-[#00ffcc] text-black px-3 py-1 rounded-full font-black text-[10px] uppercase">
+                   Match Score: {bestMatch.matchScore}%
+                </div>
                 <p className={`text-sm uppercase tracking-[0.3em] font-black mb-2 opacity-50 ${darkMode ? 'text-white' : 'text-black'}`}>
                   Vincitore Assoluto
                 </p>
@@ -144,7 +147,6 @@ const HomeOverview = ({
             <button
               onClick={onStartBattle}
               className="bg-[#6d4aff] text-white px-12 py-5 rounded-full font-black text-xl shadow-2xl shadow-[#6d4aff]/40 hover:bg-[#5a39e6] hover:scale-105 transition-all active:scale-95"
-
             >
               Battle Mode <span className="text-2xl animate-bounce-slow">⚔️</span>
             </button>
