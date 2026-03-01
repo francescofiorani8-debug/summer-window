@@ -14,9 +14,10 @@ const HomeOverview = ({
   onLogoClick,
   isGroup,           
   participantsCount,
-  // NUOVE PROPS NECESSARIE
   user,
-  onProfileClick 
+  onProfileClick,
+  // AGGIUNTA: la funzione per aprire il dettaglio della città
+  onCityClick 
 }) => {
   const [activeTool, setActiveTool] = useState(null);
 
@@ -79,7 +80,7 @@ const HomeOverview = ({
           </button>
         </div>
 
-        {/* Destra: Profilo Utente (Sostituisce lo spazio vuoto) */}
+        {/* Destra: Profilo Utente */}
         <div className="flex items-center justify-end min-w-[150px]">
           <button 
             onClick={onProfileClick}
@@ -115,7 +116,6 @@ const HomeOverview = ({
 
       {/* HERO SECTION */}
       <div className="flex flex-col items-center justify-center pt-44 pb-12 text-center px-8 relative z-10 animate-title">
-        {/* ... (Badge Dinamico rimane invariato) */}
         {(userPrefs || isGroup) && (
           <div className="mb-6 flex flex-col items-center gap-3">
             <span className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.3em] animate-pulse border
@@ -164,26 +164,41 @@ const HomeOverview = ({
           </p>
         )}
 
-        <div className="flex flex-col md:flex-row gap-4">
-          <button
-            onClick={onGoToMap}
-            className="bg-[#6d4aff] text-white px-12 py-5 rounded-full font-black text-xl shadow-2xl shadow-[#6d4aff]/40 hover:bg-[#5a39e6] hover:scale-105 transition-all active:scale-95"
-          >
-            Esplora i {recommendedCount || ""} Match
-          </button>
-
-          {isGroup && (
+        {/* --- SEZIONE BOTTONI MODIFICATA --- */}
+        <div className="flex flex-col items-center gap-6">
+          
+          {/* Tasto Esplora Città Specifica (Sopra) */}
+          {bestMatch && (
             <button
-              onClick={onStartBattle}
+              onClick={() => onCityClick(bestMatch)}
               className="bg-[#6d4aff] text-white px-12 py-5 rounded-full font-black text-xl shadow-2xl shadow-[#6d4aff]/40 hover:bg-[#5a39e6] hover:scale-105 transition-all active:scale-95"
             >
-              Battle Mode <span className="text-2xl animate-bounce-slow">⚔️</span>
+              Esplora {bestMatch.name} <span className="ml-2">→</span>
             </button>
           )}
+
+          {/* Bottoni Principali (Sotto) */}
+          <div className="flex flex-col md:flex-row gap-4">
+            <button
+              onClick={onGoToMap}
+              className="bg-[#6d4aff] text-white px-12 py-5 rounded-full font-black text-xl shadow-2xl shadow-[#6d4aff]/40 hover:bg-[#5a39e6] hover:scale-105 transition-all active:scale-95"
+            >
+              Esplora i {recommendedCount || ""} Match
+            </button>
+
+            {isGroup && (
+              <button
+                onClick={onStartBattle}
+                className="bg-[#6d4aff] text-white px-12 py-5 rounded-full font-black text-xl shadow-2xl shadow-[#6d4aff]/40 hover:bg-[#5a39e6] hover:scale-105 transition-all active:scale-95"
+              >
+                Battle Mode <span className="text-2xl animate-bounce-slow">⚔️</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* ... (Griglia Tool e Modal Tool rimangono invariati) */}
+      {/* STRUMENTI GRID */}
       <div className="max-w-6xl mx-auto px-8 pt-20 pb-40 relative z-10">
         <h2 className={`text-sm font-black uppercase tracking-[0.3em] mb-12 text-center opacity-40 ${darkMode ? 'text-white' : 'text-black'}`}>
           {isGroup ? "Tecnologia di Mediazione Social" : "I Nostri Strumenti"}
